@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:logging/logging.dart';
 
 import '../audio/audio_controller.dart';
 import '../audio/sounds.dart';
@@ -38,23 +39,14 @@ class LevelSelectionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 50),
             Expanded(
-              child: ListView(
-                children: [
-                  for (final level in gameLevels)
-                    ListTile(
-                      enabled: playerProgress.highestLevelReached >=
-                          level.number - 1,
-                      onTap: () {
-                        final audioController = context.read<AudioController>();
-                        audioController.playSfx(SfxType.buttonTap);
-
-                        GoRouter.of(context)
-                            .go('/play/session/${level.number}');
-                      },
-                      leading: Text(level.number.toString()),
-                      title: Text('Level #${level.number}'),
-                    )
-                ],
+              child: ListView.separated(
+                itemCount: gameLevels.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return _LevelButton(
+                      gameLevels[index].number, gameLevels[index].description);
+                },
+                separatorBuilder: (BuildContext context, int index) =>
+                    const SizedBox(height: 10),
               ),
             ),
           ],
@@ -66,6 +58,46 @@ class LevelSelectionScreen extends StatelessWidget {
           child: const Text('Back'),
         ),
       ),
+    );
+  }
+}
+
+class _LevelButton extends StatelessWidget {
+  final int number;
+  final String label;
+  // static final _log = Logger('LevelSelectionScreen');
+  const _LevelButton(this.number, this.label, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final playerProgress = context.watch<PlayerProgress>();
+    final palette = context.watch<Palette>();
+    // final audioController = context.read<AudioController>();
+
+    /// Level is either one that the player has already bested, on one above.
+    final available = playerProgress.highestLevelReached + 1 >= number;
+
+    /// We allow the player to skip one level.
+    final availableWithSkip = playerProgress.highestLevelReached + 2 >= number;
+
+    bool isEligibleForLevel(int number) {
+      return playerProgress.highestLevelReached >= number - 1;
+    }
+
+    return FloatingActionButton(
+      onPressed: isEligibleForLevel(number)
+          ? null
+          : () {
+              audioController.playSfx(SfxType.buttonTap);
+              GoRouter.of(context).go('/play/session/$number');
+            }(),
+      child: Text('$label',
+          style: TextStyle(fontFamily: 'Permanent Marker', fontSize: 20)),
+      backgroundColor: available
+          ? palette.redPen
+          : availableWithSkip
+              ? Color.alphaBlend(palette.redPen.withOpacity(0.6), palette.ink)
+              : palette.ink,
     );
   }
 }
