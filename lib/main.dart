@@ -170,6 +170,7 @@ class MyApp extends StatelessWidget {
                     },
                   )
                 ]),
+ 
             GoRoute(
               path: 'settings',
               builder: (context, state) =>
